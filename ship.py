@@ -14,6 +14,25 @@ class Ship:
         #Comience cada nueva nave en la parte inferior de la pantalla
         self.rect.midbottom = self.screen_rect.midbottom
         
+        #Bandera de movimiento izquierda derecha
+        self.moving_right = False
+        self.moving_left = False
+        
+        #Bandera de movimiento arriba y abajo
+        self.moving_up = False
+        self.moving_down = False
+        
+    def update_moving(self):
+        """Actualiza la posicion del barco segun la bandera de movimiento"""
+        if self.moving_right:
+            self.rect.x += 1
+        if self.moving_left:
+            self.rect.x -= 1
+        if self.moving_up:
+            self.rect.y -= 1
+        if self.moving_down:
+            self.rect.y += 1
+    
     def blitme(self):
         """Dibuja el barco en su ubicacion actual"""
         self.screen.blit(self.image,self.rect)
