@@ -3,6 +3,7 @@ import pygame
 from settings import Settings
 from ship import Ship
 from enemyShip import Enemy_ship
+from bullet import Bullet
 
 class Alien_invasion:
     """Clase general para administrar los activos y el comportamiento del juego"""
@@ -18,6 +19,8 @@ class Alien_invasion:
         self.ship = Ship(self)
         #instancia de enemy
         self.enemy = Enemy_ship(self)
+        #Bullets
+        self.bullets = pygame.sprite.Group()
 
         
     def run_game(self):
@@ -28,6 +31,9 @@ class Alien_invasion:
             
             #Actualizar el movimiento de la nave
             self.ship.update_moving()
+            
+            #Actualiza las balas
+            self.update_bullets()
             
             #Actualizacion de los objetos en pantalla
             self.update_screen() 
@@ -57,6 +63,11 @@ class Alien_invasion:
             #mueve la nave hacia abajo
         elif event.key == pygame.K_DOWN:
             self.ship.moving_down = True
+            #Salir con la q
+        elif event.key == pygame.K_q:
+            sys.exit()
+        elif event.key == pygame.K_SPACE:
+            self.fire_bullet()
             
     def check_keyup_events(self,event):
          if event.key == pygame.K_RIGHT:
@@ -67,8 +78,20 @@ class Alien_invasion:
              self.ship.moving_up = False
          elif event.key == pygame.K_DOWN:
              self.ship.moving_down = False
-
-
+             
+    def fire_bullet(self):
+        """Crea una nueva bala y la agrega al grupo de balas"""
+        if len(self.bullets) < self.settings.limit_bullets:
+            new_bullet = Bullet(self)
+            self.bullets.add(new_bullet)
+            
+    def update_bullets(self):
+        """Actualiza la posicion de las balas y deshacerce de las balas viejas"""
+        self.bullets.update()
+        #Deshace las balas que han desaparecido
+        for bullet in self.bullets.copy():
+            if bullet.rect.bottom <=0:
+                self.bullets.remove(bullet)
         
     
     def update_screen(self):
@@ -78,6 +101,9 @@ class Alien_invasion:
         self.ship.blitme()
         #Dibuja la nave enemiga
         self.enemy.enemyblitme()
+        #Actualiza y recorre la lista de balas
+        for bullet in self.bullets.sprites():
+            bullet.draw_bullet()
         #Actualizar cada pantalla a la version mas reciente
         pygame.display.flip()
         
