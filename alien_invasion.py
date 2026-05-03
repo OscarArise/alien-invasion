@@ -2,8 +2,8 @@ import sys
 import pygame
 from settings import Settings
 from ship import Ship
-from enemyShip import Enemy_ship
 from bullet import Bullet
+from alien import Alien
 
 class Alien_invasion:
     """Clase general para administrar los activos y el comportamiento del juego"""
@@ -17,12 +17,16 @@ class Alien_invasion:
         pygame.display.set_caption("Alien Invasion")
         #instancia de Ship
         self.ship = Ship(self)
-        #instancia de enemy
-        self.enemy = Enemy_ship(self)
+    
         #Bullets
         self.bullets = pygame.sprite.Group()
-
         
+        #Instancia de Alien
+        self.aliens = pygame.sprite.Group()
+        
+        self._create_fleet()
+        
+            
     def run_game(self):
         """Iniciar el bucle principal del juego"""
         while True:
@@ -92,6 +96,35 @@ class Alien_invasion:
         for bullet in self.bullets.copy():
             if bullet.rect.bottom <=0:
                 self.bullets.remove(bullet)
+                
+    def _create_fleet(self):
+        """Crea una flota de alienigenas"""            
+        #Crea un alien y encuentra el numero de extraterrestres seguidos
+        #El espacio entre cada alien es igual al ancho de un alien
+        alien = Alien(self)
+        alien_width, alien_heigth  = alien.rect.size
+        available_space_x = self.settings.screen_width - (1 * alien_width)
+        aliens_number_x = available_space_x // (2 * alien_width)
+        
+        #Determina la cantidad de filas alienigenas que caben en la pantalla
+        ship_height = self.ship.rect.height
+        available_space_y = (self.settings.screen_height - (3 * alien_heigth ) - ship_height)
+        number_rows = available_space_y // (2 * alien_heigth )
+        
+        #Crear la flota completa de alienigenas
+        for row_number in range(number_rows):
+            for alien_number in range(aliens_number_x):
+                self.create_aliens(alien_number, row_number)
+        
+    def create_aliens(self, alien_number, row_number):
+        """Crea el alien y colocalo en la fila"""
+        alien = Alien(self)
+        alien_width, alien_heigth  = alien.rect.size
+        alien.x = alien_width + 2 * alien_width * alien_number
+        alien.rect.x = alien.x
+        alien.rect.y = alien.rect.height + 2 * alien.rect.height * row_number
+
+        self.aliens.add(alien)
         
     
     def update_screen(self):
@@ -99,11 +132,13 @@ class Alien_invasion:
         self.screen.fill(self.settings.bg_color)
         #Dibuja la nave en cada actualizacion del bucle
         self.ship.blitme()
-        #Dibuja la nave enemiga
-        self.enemy.enemyblitme()
         #Actualiza y recorre la lista de balas
         for bullet in self.bullets.sprites():
             bullet.draw_bullet()
+            
+        #Dibujar a los enemigos
+        self.aliens.draw(self.screen)
+        
         #Actualizar cada pantalla a la version mas reciente
         pygame.display.flip()
         
