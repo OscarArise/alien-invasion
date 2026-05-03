@@ -13,4 +13,8 @@ class Settings:
         self.bullet_height = 15
         self.bullet_color = (255, 255, 255)
         self.limit_bullets = 3
-        
+        #Configuracion alienigena
+        self.alien_speed = 0.2
+        self.fleet_drop_speed = 5
+        #Fleet_direction de 1 representa la derecha; -1 representa la izquierda
+        self.fleet_direction = 1

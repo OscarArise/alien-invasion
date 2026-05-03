@@ -39,6 +39,9 @@ class Alien_invasion:
             #Actualiza las balas
             self.update_bullets()
             
+            #Actualiza el moviemiento del los aliens
+            self.update_aliens()
+            
             #Actualizacion de los objetos en pantalla
             self.update_screen() 
             
@@ -97,6 +100,12 @@ class Alien_invasion:
             if bullet.rect.bottom <=0:
                 self.bullets.remove(bullet)
                 
+    def update_aliens(self):
+        """Comprueba si la flota esta en un borde.
+        Luego actualice las posiciones de todos los aliens en la flota"""
+        self.check_fleet_edges()
+        self.aliens.update()
+                
     def _create_fleet(self):
         """Crea una flota de alienigenas"""            
         #Crea un alien y encuentra el numero de extraterrestres seguidos
@@ -126,6 +135,18 @@ class Alien_invasion:
 
         self.aliens.add(alien)
         
+    def check_fleet_edges(self):
+        """Responda adecuadamente si algun alien ha llegado al borde"""
+        for alien in self.aliens.sprites():
+            if alien.check_edges():
+                self.change_fleet_direction()
+                break
+    
+    def change_fleet_direction(self):
+        """Deja caer toda la flota y cambia la direccion de la flota"""
+        for alien in self.aliens.sprites():
+            alien.rect.y += self.settings.fleet_drop_speed
+        self.settings.fleet_direction *= -1
     
     def update_screen(self):
         #Vuelva a dibujar la pantalla durante cada pasa del bucle
