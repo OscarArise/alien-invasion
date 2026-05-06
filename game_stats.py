@@ -5,9 +5,12 @@ class GameStats:
         self.settings = ai_game.settings
         self.reset_stats()
 
-        self.game_active = True
+        self.game_active = False
         
         self.high_score = 0
+        
+        self.game_has_started = False  # <-- bandera nueva
+
         
     def reset_stats(self):
         """Inicializar estadisticas que pueden cambiar durante el juego"""

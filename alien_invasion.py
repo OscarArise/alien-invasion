@@ -7,6 +7,8 @@ from ship import Ship
 from bullet import Bullet
 from alien import Alien
 from game_stats import GameStats
+from buttom import Button
+from scoreboard import Scoreboard
 
 class Alien_invasion:
     """Clase general para administrar los activos y el comportamiento del juego"""
@@ -21,6 +23,8 @@ class Alien_invasion:
         
         #Crea una instancia para almacenar estadisticas del juego
         self.stats = GameStats(self)
+        self.sb = Scoreboard(self)        # <-- ¿tienes esta línea?
+
         
         #instancia de Ship
         self.ship = Ship(self)
@@ -30,10 +34,24 @@ class Alien_invasion:
         
         #Instancia de Alien
         self.aliens = pygame.sprite.Group()
+                
+        self._create_fleet()
         
+        #Estado de pausa
+        self.game_paused = False
+        
+        #Botones
+        self.play_button = Button(self, "Play")
+        self.resume_button = Button(self, "Resume", y_offset=-40)
+        self.quit_button = Button(self, "Quit (Q)", y_offset=40)
+        
+        # Fuente para overlays (pausa / game over)
+        self.overlay_font_big = pygame.font.SysFont(None, 80)
+        self.overlay_font_small = pygame.font.SysFont(None, 40)
+
+        # Reloj para estabilizar FPS
         self.clock = pygame.time.Clock()
         
-        self._create_fleet()
         
             
     def run_game(self):
@@ -42,7 +60,8 @@ class Alien_invasion:
             #Revisa los eventos del mouse y teclado
             self.check_events()
             
-            if self.stats.game_active:
+            if self.stats.game_active and not self.game_paused:
+
                 #Actualizar el movimiento de la nave
                 self.ship.update_moving()
                 
@@ -67,6 +86,10 @@ class Alien_invasion:
                 elif event.type == pygame.KEYUP:
                     self.check_keyup_events(event)
                 
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    mouse_pos = pygame.mouse.get_pos()
+                    self._check_button_clicks(mouse_pos)
+                
     
     def check_keydown_events(self,event):
         if event.key == pygame.K_RIGHT:
@@ -86,6 +109,13 @@ class Alien_invasion:
             sys.exit()
         elif event.key == pygame.K_SPACE:
             self.fire_bullet()
+        elif event.key == pygame.K_p:
+            #p Arranca el juego desde la pantalla de inicio
+            if not self.stats.game_active:
+                self._start_game()
+            #P tambien pausa y reanuda
+            elif self.stats.game_active:
+                self._toggle_pause()
             
     def check_keyup_events(self,event):
          if event.key == pygame.K_RIGHT:
@@ -97,6 +127,45 @@ class Alien_invasion:
          elif event.key == pygame.K_DOWN:
              self.ship.moving_down = False
              
+    def _check_button_clicks(self, mouse_pos):
+        """Detecta clics en los botones según el estado del juego"""
+        if not self.stats.game_active:
+            # Pantalla de inicio: botón Play
+            if self.play_button.rect.collidepoint(mouse_pos):
+                self._start_game()
+        elif self.game_paused:
+            # Pantalla de pausa: Resume o Quit
+            if self.resume_button.rect.collidepoint(mouse_pos):
+                self._toggle_pause()
+            elif self.quit_button.rect.collidepoint(mouse_pos):
+                sys.exit()
+    def _start_game(self):
+        """Reinicia el juego y lo activa"""
+        self.settings.__init__()          # Restaura velocidades originales
+        self.stats.reset_stats()
+        self.stats.game_active = True
+        self.stats.game_has_started = True  # marca que ya jugó
+        self.game_paused = False
+
+        self.aliens.empty()
+        self.bullets.empty()
+        self._create_fleet()
+        self.ship.center_ship()
+
+        # Actualiza el HUD con los valores reiniciados
+        self.sb.prep_score()
+        self.sb.prep_high_score()
+        self.sb.prep_level()
+        self.sb.prep_ships()
+
+        pygame.mouse.set_visible(False)
+    
+    def _toggle_pause(self):
+        """Alterna entre pausado y activo"""
+        self.game_paused = not self.game_paused
+        pygame.mouse.set_visible(self.game_paused)
+
+    
     def fire_bullet(self):
         """Crea una nueva bala y la agrega al grupo de balas"""
         if len(self.bullets) < self.settings.limit_bullets:
@@ -115,13 +184,23 @@ class Alien_invasion:
         
         
     def check_bullet_alien_collisions(self):
-        """Responder a colisiones de los alienigenas"""
-        #Elimina las balas y los aliens que hayan chocado
-        collisions = pygame.sprite.groupcollide(self.bullets, self.aliens, True, True)
+        collisions = pygame.sprite.groupcollide(
+            self.bullets, self.aliens, True, True)
+
+        if collisions:
+            # Suma puntos por cada alien eliminado en la colisión
+            for aliens_hit in collisions.values():
+                self.stats.score += self.settings.alien_points * len(aliens_hit)
+            self.sb.prep_score()
+            self.sb.check_high_score()
+
         if not self.aliens:
-            #Destruye las balas existentes y crea una nueva flota
+            # Sube de nivel al limpiar la pantalla
             self.bullets.empty()
             self._create_fleet()
+            self.settings.increase_speed()
+            self.stats.level += 1
+            self.sb.prep_level()
                 
                 
     def update_aliens(self):
@@ -182,9 +261,10 @@ class Alien_invasion:
     def ship_hit(self):
         """Responder a la nave siendo golpeada por un alien"""
         #Decrementar naves a la izquierda
+        self.stats.ships_left -= 1
+        self.sb.prep_ships()
+        
         if self.stats.ships_left > 0:
-            #Decrementar las vidas
-            self.stats.ships_left -= 1
             #Deshazte de los aliens y balas restantes
             self.aliens.empty()
             self.bullets.empty()
@@ -195,6 +275,8 @@ class Alien_invasion:
             sleep(0.5)
         else:
             self.stats.game_active = False
+            pygame.mouse.set_visible(True)
+
     
     def check_aliens_bottom(self):
         """Comprueba si algun alien ha llegado al final de la pantalla"""
@@ -205,19 +287,90 @@ class Alien_invasion:
                 self.ship_hit()
                 break
     
+    def _draw_overlay(self, alpha=160):
+        """Dibuja un rectángulo semitransparente sobre el juego"""
+        overlay = pygame.Surface(
+            (self.settings.screen_width, self.settings.screen_height),
+            pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, alpha))
+        self.screen.blit(overlay, (0, 0))
+
+    def _draw_start_screen(self):
+        """Pantalla de inicio: título + botón Play"""
+        self._draw_overlay()
+        title = self.overlay_font_big.render(
+            "ALIEN INVASION", True, (255, 255, 255))
+        title_rect = title.get_rect()
+        title_rect.centerx = self.screen.get_rect().centerx
+        title_rect.centery = self.screen.get_rect().centery - 80
+        self.screen.blit(title, title_rect)
+        self.play_button.draw_button()
+
+        hint = self.overlay_font_small.render(
+            "Presiona P o haz clic en Play", True, (200, 200, 200))
+        hint_rect = hint.get_rect()
+        hint_rect.centerx = self.screen.get_rect().centerx
+        hint_rect.top = self.play_button.rect.bottom + 20
+        self.screen.blit(hint, hint_rect)
+
+    def _draw_pause_screen(self):
+        """Pantalla de pausa: cartel + botones Resume/Quit"""
+        self._draw_overlay()
+        paused_text = self.overlay_font_big.render(
+            "PAUSADO", True, (255, 255, 100))
+        paused_rect = paused_text.get_rect()
+        paused_rect.centerx = self.screen.get_rect().centerx
+        paused_rect.centery = self.screen.get_rect().centery - 100
+        self.screen.blit(paused_text, paused_rect)
+        self.resume_button.draw_button()
+        self.quit_button.draw_button()
+
+    def _draw_game_over_screen(self):
+        """Pantalla de Game Over: mensaje + puntaje final + instrucciones"""
+        self._draw_overlay()
+        screen_rect = self.screen.get_rect()
+
+        go_text = self.overlay_font_big.render(
+            "GAME OVER", True, (220, 50, 50))
+        go_rect = go_text.get_rect(centerx=screen_rect.centerx,
+                                   centery=screen_rect.centery - 80)
+        self.screen.blit(go_text, go_rect)
+
+        score_text = self.overlay_font_small.render(
+            f"Puntaje: {self.stats.score:,}   Mejor: {self.stats.high_score:,}",
+            True, (255, 255, 255))
+        score_rect = score_text.get_rect(centerx=screen_rect.centerx,
+                                         centery=screen_rect.centery)
+        self.screen.blit(score_text, score_rect)
+
+        restart_text = self.overlay_font_small.render(
+            "Presiona P para volver a jugar  |  Q para salir",
+            True, (180, 180, 180))
+        restart_rect = restart_text.get_rect(centerx=screen_rect.centerx,
+                                              centery=screen_rect.centery + 60)
+        self.screen.blit(restart_text, restart_rect)
+    
     def update_screen(self):
-        #Vuelva a dibujar la pantalla durante cada pasa del bucle
         self.screen.fill(self.settings.bg_color)
-        #Dibuja la nave en cada actualizacion del bucle
         self.ship.blitme()
-        #Actualiza y recorre la lista de balas
         for bullet in self.bullets.sprites():
             bullet.draw_bullet()
-            
-        #Dibujar a los enemigos
         self.aliens.draw(self.screen)
-        
-        #Actualizar cada pantalla a la version mas reciente
+
+        # HUD siempre visible durante el juego
+        if self.stats.game_active or self.game_paused:
+            self.sb.show_score()
+
+        # Overlays según el estado
+        if not self.stats.game_active:
+            if not self.stats.game_has_started:
+                self._draw_start_screen()
+            else:
+                self._draw_game_over_screen()
+                
+        elif self.game_paused:
+            self._draw_pause_screen()
+
         pygame.display.flip()
         
         
