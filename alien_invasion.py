@@ -40,14 +40,15 @@ class Alien_invasion:
             #Revisa los eventos del mouse y teclado
             self.check_events()
             
-            #Actualizar el movimiento de la nave
-            self.ship.update_moving()
-            
-            #Actualiza las balas
-            self.update_bullets()
-            
-            #Actualiza el moviemiento del los aliens
-            self.update_aliens()
+            if self.stats.game_active == True:
+                #Actualizar el movimiento de la nave
+                self.ship.update_moving()
+                
+                #Actualiza las balas
+                self.update_bullets()
+                
+                #Actualiza el moviemiento del los aliens
+                self.update_aliens()
             
             #Actualizacion de los objetos en pantalla
             self.update_screen() 
@@ -178,16 +179,19 @@ class Alien_invasion:
     def ship_hit(self):
         """Responder a la nave siendo golpeada por un alien"""
         #Decrementar naves a la izquierda
-        self.stats.ships_left -= 1
-        #Deshazte de los aliens y balas restantes
-        self.aliens.empty()
-        self.bullets.empty()
-        #Crea una nueva flota 
-        self._create_fleet()
-        self.ship.center_ship()
-        
-        #Pausa
-        sleep(0.5)
+        if self.stats.ships_left > 0:
+            #Decrementar las vidas
+            self.stats.ships_left -= 1
+            #Deshazte de los aliens y balas restantes
+            self.aliens.empty()
+            self.bullets.empty()
+            #Crea una nueva flota 
+            self._create_fleet()
+            self.ship.center_ship()
+            #Pausa
+            sleep(0.5)
+        else:
+            self.stats.game_active = False
     
     def check_aliens_bottom(self):
         """Comprueba si algun alien ha llegado al final de la pantalla"""
