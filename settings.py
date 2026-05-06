@@ -9,6 +9,11 @@ class Settings:
         self.ship_speed = 1.5
          #Vidas
         self.ship_limit = 3
+        #Puntos por alien eliminado
+        self.alien_points = 50
+        #Escala de velocidad al subir de nivel
+        self.speedup_scale = 1.1
+        
         #configuracion de las ballas
         self.bullet_speed = 1.0
         self.bullet_width = 3
@@ -20,3 +25,9 @@ class Settings:
         self.fleet_drop_speed = 5
         #Fleet_direction de 1 representa la derecha; -1 representa la izquierda
         self.fleet_direction = 1
+    
+    def increase_speed(self):
+        """Aumenta la velocidad al superar una oleada"""
+        self.bullet_speed *= self.speedup_scale
+        self.alien_speed *= self.speedup_scale
+        self.fleet_drop_speed *= self.speedup_scale
