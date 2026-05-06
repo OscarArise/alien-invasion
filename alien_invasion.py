@@ -31,6 +31,8 @@ class Alien_invasion:
         #Instancia de Alien
         self.aliens = pygame.sprite.Group()
         
+        self.clock = pygame.time.Clock()
+        
         self._create_fleet()
         
             
@@ -40,7 +42,7 @@ class Alien_invasion:
             #Revisa los eventos del mouse y teclado
             self.check_events()
             
-            if self.stats.game_active == True:
+            if self.stats.game_active:
                 #Actualizar el movimiento de la nave
                 self.ship.update_moving()
                 
@@ -52,6 +54,7 @@ class Alien_invasion:
             
             #Actualizacion de los objetos en pantalla
             self.update_screen() 
+            self.clock.tick(6000)
             
     def check_events(self):
          for event in pygame.event.get():
