@@ -1,9 +1,12 @@
 import sys
 import pygame
+from time import sleep
+
 from settings import Settings
 from ship import Ship
 from bullet import Bullet
 from alien import Alien
+from game_stats import GameStats
 
 class Alien_invasion:
     """Clase general para administrar los activos y el comportamiento del juego"""
@@ -15,6 +18,10 @@ class Alien_invasion:
         
         self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height))
         pygame.display.set_caption("Alien Invasion")
+        
+        #Crea una instancia para almacenar estadisticas del juego
+        self.stats = GameStats(self)
+        
         #instancia de Ship
         self.ship = Ship(self)
     
@@ -118,6 +125,13 @@ class Alien_invasion:
         Luego actualice las posiciones de todos los aliens en la flota"""
         self.check_fleet_edges()
         self.aliens.update()
+        
+        #Busque colisiones de naves alienigenas
+        if pygame.sprite.spritecollideany(self.ship, self.aliens):
+            self.ship_hit()
+        
+        #Busca aliens que han golpeado la parte inferior de la pantalla
+        self.check_aliens_bottom()
                 
     def _create_fleet(self):
         """Crea una flota de alienigenas"""            
@@ -160,6 +174,29 @@ class Alien_invasion:
         for alien in self.aliens.sprites():
             alien.rect.y += self.settings.fleet_drop_speed
         self.settings.fleet_direction *= -1
+    
+    def ship_hit(self):
+        """Responder a la nave siendo golpeada por un alien"""
+        #Decrementar naves a la izquierda
+        self.stats.ships_left -= 1
+        #Deshazte de los aliens y balas restantes
+        self.aliens.empty()
+        self.bullets.empty()
+        #Crea una nueva flota 
+        self._create_fleet()
+        self.ship.center_ship()
+        
+        #Pausa
+        sleep(0.5)
+    
+    def check_aliens_bottom(self):
+        """Comprueba si algun alien ha llegado al final de la pantalla"""
+        screen_rect = self.screen.get_rect()
+        for alien in self.aliens.sprites():
+            if alien.rect.bottom >= screen_rect.bottom:
+                #Tratar de la misma forma como si la nave hubiera sido golpeada
+                self.ship_hit()
+                break
     
     def update_screen(self):
         #Vuelva a dibujar la pantalla durante cada pasa del bucle
